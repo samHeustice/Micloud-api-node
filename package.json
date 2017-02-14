@@ -1,0 +1,9 @@
+{
+  "name": "Micloud-API",
+  "title": "Micloud-API",
+  "version": "1.0.0",
+  "devDependencies": {
+    "mysql": "^2.13.0",
+    "node-mysql": "^0.4.2"
+  }
+}
