@@ -2,6 +2,8 @@
 console.log('Loading event');
 
 var mysql = require('mysql');
+var md5   = require('js-md5')
+
 exports.handler = function(event, context, callback) {
   var date=new Date();
   date.setTime(+ date + (10)); //24 \* 60 \* 60 \* 100
@@ -13,16 +15,10 @@ exports.handler = function(event, context, callback) {
   host     : process.env.RDS_HOSTNAME,
   user     : process.env.RDS_USERNAME,
   password : process.env.RDS_PASSWORD,
-  port     : process.env.RDS_PORT
+  port     : process.env.RDS_PORT,
+  database : process.env.RDS_DB
 });
 
-/*connection.connect()
-connection.query('SELECT * FROM Micloud.sessions WHERE userid=4',function(error, results, fields){
-    console.log(results[0]);
-    connection.end();//,"text":event.Cookie,"testing":"am i a cookie""cookiestuff":event.keys
-    context.done(null,{"Cookie":cookieString,"test":event.headers})
-    
-})*/
 
 function getCookie(cname) {
     var name = cname + "=";
@@ -37,21 +33,47 @@ function getCookie(cname) {
             return c.substring(name.length, c.length);
         }
     }
-    return "";
+    return 0;
 }
 //"test":event.headers.Cookie.sessionId        WORKING
 //context.done(null,{"Cookie":cookieString,"test":getCookie('sessionId')})
 
+
+
+connection.connect()
+
+if (getCookie('sessionId')!=0){
+  connection.query('SELECT userid FROM sessions WHERE sessionId=?',getCookie('sessionId'),function(error, results, fields){
+    if (results[0]){
+      //cookie still valid in session
+        context.done(null,{"youAre":results[0],"LoginParsed":"Yes"})
+    }else{
+      //session has expired
+        context.done(null,{"youAre":"Not Logged In"})
+        logMeIn()
+    }
     
+    connection.end();
+    //context.done(null,{"Cookie":cookieString,})
+})}else{
+  //no cookie data
+    context.done(null,{"youAre":"Not Logged In"})
+    logMeIn()
+    connection.end();
+}
 
-/*
-connection.query('SELECT 1 + 1 AS solution', function (error, results, fields) {
-  if (error) throw error;
-  console.log('The solution is: ', results[0].solution);
-})*/
-
-  
-  
+function logMeIn() {
+    connection.query('SELECT  userid password firstName lastName organisation FROM Micloud.users WHERE username=?',event.body.username,function(error, results, fields){
+      if (results[0]){
+        let md5Password=md5(event.body.password)
+        if (md5Password==results[0].password){
+          //make login session
+        }
+        
+    }
+    })
+  //event.body.username
+}
  
   //callback(null, {}); // SUCCESS with message
 };
