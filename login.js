@@ -8,10 +8,22 @@ exports.handler = function(event, context, callback) {
   function makeCookieData() {
   var date=new Date();
   date.setTime(+ date + 60*60*24*process.env.CookieTTL); //24 \* 60 \* 60 \* 100
-  var cookieVal = Math.random().toString(36).substring(7); // Generate a random cookie string
+  //var cookieVal = Math.random().toString(36).substring(7); // Generate a random cookie string
+  var cookieVal=randomKey(process.env.CookieLength,16)
   //var cookieString = "myCookie="+cookieVal+"; domain=micloud; expires="+date.toGMTString()+";";
-  var cookieString = "sessionId="+cookieVal
+  var cookieString = "sessionId="+cookieVal+"; expires="+date.toGMTString()+";";
   return {cookieString,cookieVal,ttl:date.toGMTString()}
+}
+
+function randomKey(len,bits){
+  bits = bits || 36;
+  var outStr = "", newStr;
+  while (outStr.length < len)
+  {
+      newStr = Math.random().toString(bits).slice(2);
+      outStr += newStr.slice(0, Math.min(newStr.length, (len - outStr.length)));
+  }
+  return outStr.toUpperCase();
 }
   
   var connection = mysql.createConnection({
@@ -69,9 +81,12 @@ function logMeIn() {
         if (md5Password==results[0].password){
           //make login session
           //context.done(null,{"passwordMatch":"yes"})
-          let inserts=[makeCookieData().cookieVal,results[0].userId,]
-          connection.query('INSERT INTO sessions (sessionId, userId, expiry, userAgent) VALUES(?, ?, NOW() + INTERVAL 7 DAY, ?);')
-          //context.done(null,{'Content':makeCookieData().cookieVal})
+          let inserts=[makeCookieData().cookieVal,results[0].userid,event.headers["User-Agent"]]
+          connection.query('INSERT INTO sessions (sessionId, userId, expiry, userAgent) VALUES(?, ?, NOW() + INTERVAL 7 DAY, ?);',inserts,((error, results, fields)=>{
+            connection.end();
+            context.done(null,{"feedback":results[0]})
+          }))
+          //context.done(null,{'Content':makeCookieData().cookieVal,"Agent":event.headers["User-Agent"],"userid":results[0].userId})
           
         }else{
           //Invalid password
